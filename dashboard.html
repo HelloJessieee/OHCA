@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OHCA Emergency Resource Optimization Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@3.3.1/dist/maplibre-gl.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/maplibre-gl@3.3.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36D399',
+                        danger: '#F87272',
+                        warning: '#FBBD23',
+                        info: '#3ABFF8',
+                        dark: '#1E293B',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-shadow {
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            }
+            .sidebar-item-active {
+                @apply bg-primary/10 text-primary border-r-4 border-primary;
+            }
+            .stat-card {
+                @apply bg-white rounded-xl p-5 card-shadow transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+            }
+            .stat-card-danger {
+                @apply bg-danger/5 border-l-4 border-danger;
+            }
+            .stat-card-warning {
+                @apply bg-warning/5 border-l-4 border-warning;
+            }
+            .stat-card-success {
+                @apply bg-secondary/5 border-l-4 border-secondary;
+            }
+            .stat-card-info {
+                @apply bg-info/5 border-l-4 border-info;
+            }
+            .map-container {
+                @apply w-full h-[500px] rounded-xl overflow-hidden card-shadow;
+            }
+            .btn-primary {
+                @apply bg-primary text-white px-4 py-2 rounded-lg transition-all duration-300 hover:bg-primary/90 focus:ring-2 focus:ring-primary/50 focus:outline-none;
+            }
+            .btn-secondary {
+                @apply bg-white border border-gray-300 text-dark px-4 py-2 rounded-lg transition-all duration-300 hover:bg-gray-50 focus:ring-2 focus:ring-gray-200 focus:outline-none;
+            }
+            .form-input {
+                @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all duration-300;
+            }
+            .tooltip-custom {
+                @apply invisible absolute bg-dark text-white text-xs rounded py-1 px-2 -mt-8 opacity-0 transition-opacity duration-300;
+            }
+            .has-tooltip:hover .tooltip-custom {
+                @apply visible opacity-100 z-50;
+            }
+            .module-transition {
+                @apply transition-all duration-500 ease-in-out;
+            }
+            .progress-bar {
+                @apply h-2 bg-gray-200 rounded-full overflow-hidden;
+            }
+            .progress-value {
+                @apply h-full rounded-full transition-all duration-1000 ease-out;
+            }
+            .network-node {
+                @apply transition-all duration-300 hover:scale-110 cursor-pointer;
+            }
+            .network-link {
+                @apply transition-all duration-500;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 text-dark">
+    <!-- Data loaded successfully -->
+    <div id="data-status" class="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg">
+        <i class="fa fa-check-circle mr-2"></i>Data loaded successfully
+    </div>
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <aside id="sidebar" class="w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-20 lg:translate-x-0 -translate-x-full fixed lg:relative h-full">
+            <div class="p-5 border-b">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-primary/10 p-2 rounded-lg">
+                        <i class="fa fa-heartbeat text-primary text-xl"></i>
+                    </div>
+                    <h1 class="text-xl font-bold text-primary">OHCA Resource Optimization</h1>
+                </div>
+            </div>
+            
+            <nav class="py-4">
+                <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Main Menu</div>
+                <a href="#dashboard" class="dashboard-link flex items-center px-4 py-3 sidebar-item-active">
+                    <i class="fa fa-tachometer w-5 text-center mr-3"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#risk" class="dashboard-link flex items-center px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-map-marker w-5 text-center mr-3"></i>
+                    <span>Risk Assessment</span>
+                </a>
+                <a href="#aed" class="dashboard-link flex items-center px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-medkit w-5 text-center mr-3"></i>
+                    <span>AED Placement</span>
+                </a>
+                <a href="#volunteer" class="dashboard-link flex items-center px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-users w-5 text-center mr-3"></i>
+                    <span>Volunteer Dispatch</span>
+                </a>
+                <a href="#prediction" class="dashboard-link flex items-center px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-line-chart w-5 text-center mr-3"></i>
+                    <span>Risk Forecasting</span>
+                </a>
+                
+                <div class="px-4 py-2 mt-6 text-xs font-semibold text-gray-400 uppercase tracking-wider">Supporting Data</div>
+                <a href="#data" class="dashboard-link flex items-center px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-database w-5 text-center mr-3"></i>
+                    <span>Data & Limitations</span>
+                </a>
+                <a href="#references" class="dashboard-link flex items-center px-4 py-3 hover:bg-gray-50 transition-colors">
+                    <i class="fa fa-book w-5 text-center mr-3"></i>
+                    <span>References</span>
+                </a>
+            </nav>
+            
+            <div class="absolute bottom-0 w-full p-4 border-t">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <img src="https://picsum.photos/seed/ohca/40/40" alt="User Profile" class="w-8 h-8 rounded-full mr-3 ring-2 ring-primary/20">
+                        <div>
+                            <p class="text-sm font-medium">Admin</p>
+                            <p class="text-xs text-gray-500">SCDF Emergency Services</p>
+                        </div>
+                    </div>
+                    <button class="text-gray-400 hover:text-danger transition-colors">
+                        <i class="fa fa-sign-out"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- Top Navigation Bar -->
+            <header class="bg-white shadow-sm z-10">
+                <div class="flex items-center justify-between p-4">
+                    <div class="flex items-center">
+                        <button id="sidebar-toggle" class="lg:hidden mr-4 text-gray-500 hover:text-primary transition-colors">
+                            <i class="fa fa-bars text-xl"></i>
+                        </button>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                                <i class="fa fa-search text-gray-400"></i>
+                            </span>
+                            <input type="text" placeholder="Search locations or metrics..." class="pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary w-64">
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <button class="has-tooltip relative">
+                            <i class="fa fa-bell text-gray-500 hover:text-primary transition-colors"></i>
+                            <span class="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full"></span>
+                            <span class="tooltip-custom">No notifications</span>
+                        </button>
+                        
+                        <div class="relative">
+                            <button id="stakeholder-toggle" class="flex items-center space-x-2 bg-gray-100 px-3 py-2 rounded-lg hover:bg-gray-200 transition-colors">
+                                <i class="fa fa-user-circle text-gray-500"></i>
+                                <span>Stakeholder</span>
+                                <i class="fa fa-chevron-down text-xs text-gray-500"></i>
+                            </button>
+                            
+                            <div id="stakeholder-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-10">
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 stakeholder-option" data-role="决策者">Policy Makers</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 stakeholder-option" data-role="社区管理者">Community Managers</a>
+                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 stakeholder-option" data-role="急救志愿者">First Responders</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-4 lg:p-6">
+                <!-- Dashboard Overview Module -->
+                <section id="dashboard" class="space-y-6 module-transition">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">Dashboard Overview</h2>
+                        <div class="flex space-x-2">
+                            <button class="btn-secondary">
+                                <i class="fa fa-download mr-2"></i>Export Report
+                            </button>
+                            <button class="btn-primary">
+                                <i class="fa fa-refresh mr-2"></i>Refresh Data
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Key Metrics Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="stat-card stat-card-danger">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Total OHCA Cases</p>
+                                    <h3 class="text-3xl font-bold mt-1" id="total-ohca">3,451</h3>
+                                    <p class="text-danger text-sm mt-2">
+                                        <i class="fa fa-arrow-up mr-1"></i>Across 20 subzones
+                                    </p>
+                                </div>
+                                <div class="bg-danger/10 p-3 rounded-lg">
+                                    <i class="fa fa-ambulance text-danger text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card stat-card-warning">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Average Risk Score</p>
+                                    <h3 class="text-3xl font-bold mt-1" id="avg-risk">0.072</h3>
+                                    <p class="text-warning text-sm mt-2">
+                                        <i class="fa fa-arrow-up mr-1"></i>Highest: 0.084
+                                    </p>
+                                </div>
+                                <div class="bg-warning/10 p-3 rounded-lg">
+                                    <i class="fa fa-heartbeat text-warning text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card stat-card-info">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Volunteers Assigned</p>
+                                    <h3 class="text-3xl font-bold mt-1" id="volunteers-assigned">3</h3>
+                                    <p class="text-info text-sm mt-2">
+                                        <i class="fa fa-arrow-up mr-1"></i>To high-risk zones
+                                    </p>
+                                </div>
+                                <div class="bg-info/10 p-3 rounded-lg">
+                                    <i class="fa fa-users text-info text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card stat-card-success">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Top Risk Zone</p>
+                                    <h3 class="text-3xl font-bold mt-1" id="top-risk-zone">1005</h3>
+                                    <p class="text-secondary text-sm mt-2">
+                                        <i class="fa fa-map-marker mr-1"></i>228 OHCA cases
+                                    </p>
+                                </div>
+                                <div class="bg-secondary/10 p-3 rounded-lg">
+                                    <i class="fa fa-exclamation-triangle text-secondary text-xl"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Data Table -->
+                    <div class="bg-white rounded-xl p-5 card-shadow">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-lg">Risk Assessment Results</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-sm text-gray-500 hover:text-primary transition-colors">
+                                    <i class="fa fa-expand"></i>
+                                </button>
+                                <button class="text-sm text-gray-500 hover:text-primary transition-colors">
+                                    <i class="fa fa-refresh"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b">
+                                        <th class="text-left py-2">Subzone</th>
+                                        <th class="text-left py-2">Risk Score</th>
+                                        <th class="text-left py-2">OHCA Count</th>
+                                        <th class="text-left py-2">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="risk-table-body">
+                                    <!-- Data will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Volunteer Assignments -->
+                    <div class="bg-white rounded-xl p-5 card-shadow">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-lg">Volunteer Assignments</h3>
+                            <span class="bg-primary/10 text-primary text-xs px-3 py-1 rounded-full">3 Assignments</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="volunteer-assignments">
+                            <!-- Data will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Risk Assessment Module -->
+                <section id="risk" class="space-y-6 module-transition hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">Risk Assessment Details</h2>
+                        <div class="flex space-x-2">
+                            <button class="btn-secondary">
+                                <i class="fa fa-download mr-2"></i>Export Data
+                            </button>
+                            <button class="btn-primary">
+                                <i class="fa fa-refresh mr-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Risk Distribution Chart -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Risk Score Distribution</h3>
+                            <canvas id="risk-distribution-chart" height="300"></canvas>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">OHCA Cases by Zone</h3>
+                            <canvas id="ohca-cases-chart" height="300"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Detailed Risk Analysis -->
+                    <div class="bg-white rounded-xl p-5 card-shadow">
+                        <h3 class="font-bold text-lg mb-4">Top 5 High-Risk Zones</h3>
+                        <div class="space-y-4" id="top-risk-zones">
+                            <!-- Data will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AED Placement Module -->
+                <section id="aed" class="space-y-6 module-transition hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">AED Placement Optimization</h2>
+                        <div class="flex space-x-2">
+                            <button class="btn-secondary">
+                                <i class="fa fa-download mr-2"></i>Export Map
+                            </button>
+                            <button class="btn-primary">
+                                <i class="fa fa-calculator mr-2"></i>Recalculate
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- AED Optimization Results -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2">
+                            <div class="bg-white rounded-xl p-5 card-shadow">
+                                <h3 class="font-bold text-lg mb-4">AED Coverage Analysis</h3>
+                                <div class="space-y-4">
+                                    <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <h4 class="font-medium text-blue-700 mb-2">Current Status</h4>
+                                        <p class="text-sm text-blue-700">Based on risk analysis, we recommend placing AEDs in high-risk zones to maximize coverage.</p>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="p-4 border border-gray-200 rounded-lg">
+                                            <h4 class="font-medium mb-2">Current Coverage</h4>
+                                            <div class="flex items-center">
+                                                <div class="w-full bg-gray-200 rounded-full h-2 mr-3">
+                                                    <div class="bg-blue-500 h-2 rounded-full" style="width: 60%"></div>
+                                                </div>
+                                                <span class="text-sm font-medium">60%</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="p-4 border border-gray-200 rounded-lg">
+                                            <h4 class="font-medium mb-2">Projected Coverage</h4>
+                                            <div class="flex items-center">
+                                                <div class="w-full bg-gray-200 rounded-full h-2 mr-3">
+                                                    <div class="bg-green-500 h-2 rounded-full" style="width: 75%"></div>
+                                                </div>
+                                                <span class="text-sm font-medium">75%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Top AED Placement Recommendations</h3>
+                            <div class="space-y-3">
+                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                    <h4 class="font-medium text-sm">Zone 1005 (High Priority)</h4>
+                                    <p class="text-xs text-gray-600">228 OHCA cases, Risk: 0.0837</p>
+                                    <p class="text-xs text-green-600 mt-1">Coverage: 800+ residents</p>
+                                </div>
+                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                    <h4 class="font-medium text-sm">Zone 1020 (High Priority)</h4>
+                                    <p class="text-xs text-gray-600">67 OHCA cases, Risk: 0.0834</p>
+                                    <p class="text-xs text-green-600 mt-1">Coverage: 600+ residents</p>
+                                </div>
+                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                    <h4 class="font-medium text-sm">Zone 1004 (Medium Priority)</h4>
+                                    <p class="text-xs text-gray-600">118 OHCA cases, Risk: 0.0796</p>
+                                    <p class="text-xs text-green-600 mt-1">Coverage: 500+ residents</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Volunteer Dispatch Module -->
+                <section id="volunteer" class="space-y-6 module-transition hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">Volunteer Dispatch Optimization</h2>
+                        <div class="flex space-x-2">
+                            <button class="btn-secondary">
+                                <i class="fa fa-download mr-2"></i>Export Schedule
+                            </button>
+                            <button class="btn-primary">
+                                <i class="fa fa-refresh mr-2"></i>Update Assignments
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Volunteer Network -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="lg:col-span-2 bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Current Volunteer Assignments</h3>
+                            <div class="space-y-4">
+                                <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                                    <h4 class="font-medium text-green-700 mb-2">Assignment Summary</h4>
+                                    <p class="text-sm text-green-700">3 volunteers have been optimally assigned to high-risk zones based on proximity and availability.</p>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="p-3 bg-gray-50 rounded-lg">
+                                        <p class="text-sm text-gray-500">Total Volunteers</p>
+                                        <p class="text-2xl font-bold">5</p>
+                                    </div>
+                                    <div class="p-3 bg-gray-50 rounded-lg">
+                                        <p class="text-sm text-gray-500">Assigned</p>
+                                        <p class="text-2xl font-bold text-primary">3</p>
+                                    </div>
+                                    <div class="p-3 bg-gray-50 rounded-lg">
+                                        <p class="text-sm text-gray-500">Available</p>
+                                        <p class="text-2xl font-bold text-green-500">2</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Response Time Analysis</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                                    <div>
+                                        <p class="font-medium text-sm">Zone 1005</p>
+                                        <p class="text-xs text-gray-500">v001 assigned</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium text-sm">4.2 min</p>
+                                        <p class="text-xs text-green-500">Optimal</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                                    <div>
+                                        <p class="font-medium text-sm">Zone 1020</p>
+                                        <p class="text-xs text-gray-500">v002 assigned</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium text-sm">5.1 min</p>
+                                        <p class="text-xs text-green-500">Good</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
+                                    <div>
+                                        <p class="font-medium text-sm">Zone 1004</p>
+                                        <p class="text-xs text-gray-500">v003 assigned</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="font-medium text-sm">4.8 min</p>
+                                        <p class="text-xs text-green-500">Good</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Risk Forecasting Module -->
+                <section id="prediction" class="space-y-6 module-transition hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">Risk Forecasting</h2>
+                        <div class="flex space-x-2">
+                            <button class="btn-secondary">
+                                <i class="fa fa-download mr-2"></i>Export Forecast
+                            </button>
+                            <button class="btn-primary">
+                                <i class="fa fa-refresh mr-2"></i>Update Forecast
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Forecast Analysis -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Risk Trend Analysis</h3>
+                            <div class="space-y-4">
+                                <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                                    <h4 class="font-medium text-yellow-700 mb-2">Trending Up</h4>
+                                    <p class="text-sm text-yellow-700">Zones 1005 and 1020 show increasing risk patterns based on demographic changes.</p>
+                                </div>
+                                
+                                <div class="p-4 bg-green-50 rounded-lg border border-green-200">
+                                    <h4 class="font-medium text-green-700 mb-2">Stable</h4>
+                                    <p class="text-sm text-green-700">Most zones maintain consistent risk levels with minor fluctuations.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Forecast Factors</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm">Elderly Population Growth</span>
+                                    <span class="text-sm font-medium text-red-500">+12%</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm">Population Density</span>
+                                    <span class="text-sm font-medium text-blue-500">+5%</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm">Mobility Patterns</span>
+                                    <span class="text-sm font-medium text-gray-500">Stable</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm">Socioeconomic Changes</span>
+                                    <span class="text-sm font-medium text-green-500">-3%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Data & Limitations Module -->
+                <section id="data" class="space-y-6 module-transition hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">Data Sources & Limitations</h2>
+                        <button class="btn-secondary">
+                            <i class="fa fa-download mr-2"></i>Export Data Sheet
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Data Sources -->
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Data Sources</h3>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="font-medium text-primary mb-2 flex items-center">
+                                        <i class="fa fa-database mr-2"></i>Generated Data
+                                    </h4>
+                                    <ul class="space-y-2 pl-6 list-disc text-gray-700 text-sm">
+                                        <li>Population & Housing: Simulated data for 20 subzones</li>
+                                        <li>Socioeconomic Indicators: Modeled based on typical patterns</li>
+                                        <li>OHCA Cases: Generated using risk-based distribution</li>
+                                        <li>Volunteer Data: Hypothetical assignments for demonstration</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <h4 class="font-medium text-blue-700 mb-1">Data Quality</h4>
+                                    <p class="text-sm text-blue-700">
+                                        This is a demonstration using simulated data. Real implementation would use actual Singapore demographic and health data.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Limitations & Methodology -->
+                        <div class="bg-white rounded-xl p-5 card-shadow">
+                            <h3 class="font-bold text-lg mb-4">Limitations & Methodology</h3>
+                            
+                            <div class="space-y-4">
+                                <div>
+                                    <h4 class="font-medium text-orange-600 mb-2 flex items-center">
+                                        <i class="fa fa-exclamation-triangle mr-2"></i>Key Limitations
+                                    </h4>
+                                    <ul class="space-y-2 pl-6 list-disc text-gray-700 text-sm">
+                                        <li>Data is simulated for demonstration purposes</li>
+                                        <li>Real OHCA data would require privacy protection</li>
+                                        <li>Geographic boundaries are simplified</li>
+                                        <li>Volunteer availability is estimated</li>
+                                    </ul>
+                                </div>
+                                
+                                <div>
+                                    <h4 class="font-medium text-green-600 mb-2 flex items-center">
+                                        <i class="fa fa-cogs mr-2"></i>Methodology
+                                    </h4>
+                                    <ul class="space-y-2 pl-6 list-disc text-gray-700 text-sm">
+                                        <li>Risk scoring based on demographic factors</li>
+                                        <li>Volunteer assignment using proximity matching</li>
+                                        <li>AED placement optimization using coverage analysis</li>
+                                        <li>Forecasting using trend analysis</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- References Module -->
+                <section id="references" class="space-y-6 module-transition hidden">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold">References & Further Reading</h2>
+                        <button class="btn-secondary">
+                            <i class="fa fa-download mr-2"></i>Export Reference List
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl p-5 card-shadow">
+                        <div class="space-y-4">
+                            <div class="p-3 hover:bg-gray-50 rounded transition-colors">
+                                <p class="font-medium">Larsen, M. P., Eisenberg, M. S., Cummins, R. O., & Hallstrom, A. P. (1993).</p>
+                                <p class="text-gray-700">Predicting survival from out-of-hospital cardiac arrest: a graphic model. <em>Annals of Emergency Medicine, 22(11), 1652–1658.</em></p>
+                            </div>
+                            
+                            <div class="p-3 hover:bg-gray-50 rounded transition-colors">
+                                <p class="font-medium">Valenzuela, T. D., Roe, D. J., Cretin, S., Spaite, D. W., & Larsen, M. P. (1997).</p>
+                                <p class="text-gray-700">Estimating effectiveness of cardiac arrest interventions: a logistic regression survival model. <em>Circulation, 96(10), 3308–3313.</em></p>
+                            </div>
+                            
+                            <div class="p-3 hover:bg-gray-50 rounded transition-colors">
+                                <p class="font-medium">Church, R. L., & ReVelle, C. (1974).</p>
+                                <p class="text-gray-700">The maximal covering location problem. <em>Papers of the Regional Science Association, 32(1), 101–118.</em></p>
+                            </div>
+                            
+                            <div class="p-3 hover:bg-gray-50 rounded transition-colors">
+                                <p class="font-medium">Weisfeldt, M. L., & Becker, L. B. (2002).</p>
+                                <p class="text-gray-700">Resuscitation after cardiac arrest: a 3-phase time-sensitive model. <em>JAMA, 288(23), 3035–3038.</em></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript for Dashboard Functionality -->
+    <script>
+        // Real data from outputs
+        const riskData = [
+            {subzone: 1001, risk_score: 0.07944, ohca_count: 188},
+            {subzone: 1002, risk_score: 0.06434, ohca_count: 62},
+            {subzone: 1003, risk_score: 0.069335, ohca_count: 134},
+            {subzone: 1004, risk_score: 0.07963999999999999, ohca_count: 118},
+            {subzone: 1005, risk_score: 0.08374, ohca_count: 228},
+            {subzone: 1006, risk_score: 0.06843500000000001, ohca_count: 242},
+            {subzone: 1007, risk_score: 0.07604, ohca_count: 203},
+            {subzone: 1008, risk_score: 0.06724, ohca_count: 76},
+            {subzone: 1009, risk_score: 0.06344, ohca_count: 45},
+            {subzone: 1010, risk_score: 0.07454, ohca_count: 69},
+            {subzone: 1011, risk_score: 0.06964000000000001, ohca_count: 111},
+            {subzone: 1012, risk_score: 0.06914, ohca_count: 217},
+            {subzone: 1013, risk_score: 0.06884, ohca_count: 224},
+            {subzone: 1004, risk_score: 0.07514, ohca_count: 314},
+            {subzone: 1015, risk_score: 0.07274, ohca_count: 104},
+            {subzone: 1016, risk_score: 0.07544000000000001, ohca_count: 322},
+            {subzone: 1017, risk_score: 0.070135, ohca_count: 281},
+            {subzone: 1018, risk_score: 0.07244, ohca_count: 221},
+            {subzone: 1019, risk_score: 0.05894, ohca_count: 225},
+            {subzone: 1020, risk_score: 0.08343999999999999, ohca_count: 67}
+        ];
+
+        const volunteerAssignments = [
+            {zone: 1005, volunteer_id: 'v001', home_subzone: 1001},
+            {zone: 1020, volunteer_id: 'v002', home_subzone: 1007},
+            {zone: 1004, volunteer_id: 'v003', home_subzone: 1008}
+        ];
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            populateRiskTable();
+            populateVolunteerAssignments();
+            populateTopRiskZones();
+            initCharts();
+            
+            // Hide data status after 3 seconds
+            setTimeout(() => {
+                document.getElementById('data-status').style.display = 'none';
+            }, 3000);
+        });
+
+        // Populate risk table
+        function populateRiskTable() {
+            const tbody = document.getElementById('risk-table-body');
+            tbody.innerHTML = '';
+            
+            riskData.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                
+                const riskLevel = item.risk_score > 0.08 ? 'High' : item.risk_score > 0.07 ? 'Medium' : 'Low';
+                const riskColor = riskLevel === 'High' ? 'text-red-500' : riskLevel === 'Medium' ? 'text-yellow-500' : 'text-green-500';
+                
+                row.innerHTML = `
+                    <td class="py-2 font-medium">${item.subzone}</td>
+                    <td class="py-2">${item.risk_score.toFixed(4)}</td>
+                    <td class="py-2">${item.ohca_count}</td>
+                    <td class="py-2"><span class="${riskColor} font-medium">${riskLevel}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Populate volunteer assignments
+        function populateVolunteerAssignments() {
+            const container = document.getElementById('volunteer-assignments');
+            container.innerHTML = '';
+            
+            volunteerAssignments.forEach(assignment => {
+                const card = document.createElement('div');
+                card.className = 'p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-medium">Zone ${assignment.zone}</h4>
+                        <span class="bg-primary/10 text-primary text-xs px-2 py-1 rounded">${assignment.volunteer_id}</span>
+                    </div>
+                    <p class="text-sm text-gray-600">Home: Zone ${assignment.home_subzone}</p>
+                    <p class="text-xs text-gray-500 mt-1">Available: 08:00-18:00</p>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Populate top risk zones
+        function populateTopRiskZones() {
+            const container = document.getElementById('top-risk-zones');
+            if (!container) return;
+            
+            const top5 = riskData.sort((a, b) => b.risk_score - a.risk_score).slice(0, 5);
+            
+            top5.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'flex items-center justify-between p-4 border border-gray-200 rounded-lg';
+                card.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center mr-3">
+                            <span class="text-primary font-bold text-sm">${index + 1}</span>
+                        </div>
+                        <div>
+                            <h4 class="font-medium">Zone ${item.subzone}</h4>
+                            <p class="text-sm text-gray-600">${item.ohca_count} OHCA cases</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-bold text-lg">${item.risk_score.toFixed(4)}</p>
+                        <p class="text-xs text-gray-500">Risk Score</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Initialize charts
+        function initCharts() {
+            // Risk Distribution Chart
+            const riskCtx = document.getElementById('risk-distribution-chart');
+            if (riskCtx) {
+                new Chart(riskCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: riskData.map(item => `Zone ${item.subzone}`),
+                        datasets: [{
+                            label: 'Risk Score',
+                            data: riskData.map(item => item.risk_score),
+                            backgroundColor: '#165DFF',
+                            borderColor: '#165DFF',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Risk Score'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // OHCA Cases Chart
+            const ohcaCtx = document.getElementById('ohca-cases-chart');
+            if (ohcaCtx) {
+                new Chart(ohcaCtx, {
+                    type: 'line',
+                    data: {
+                        labels: riskData.map(item => `Zone ${item.subzone}`),
+                        datasets: [{
+                            label: 'OHCA Cases',
+                            data: riskData.map(item => item.ohca_count),
+                            borderColor: '#F87272',
+                            backgroundColor: '#F87272',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Number of Cases'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // Sidebar toggle
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        });
+
+        // Stakeholder dropdown toggle
+        document.getElementById('stakeholder-toggle').addEventListener('click', function() {
+            document.getElementById('stakeholder-dropdown').classList.toggle('hidden');
+        });
+
+        // Navigation between modules
+        function navigateTo(moduleId) {
+            // Hide all modules
+            document.querySelectorAll('section[id]').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // Show target module
+            const targetModule = document.getElementById(moduleId);
+            targetModule.classList.remove('hidden');
+            
+            // Update active sidebar item
+            document.querySelectorAll('.dashboard-link').forEach(link => {
+                link.classList.remove('sidebar-item-active');
+            });
+            document.querySelector(`.dashboard-link[href="#${moduleId}"]`).classList.add('sidebar-item-active');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        // Add navigation event listeners
+        document.querySelectorAll('.dashboard-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const moduleId = this.getAttribute('href').substring(1);
+                navigateTo(moduleId);
+            });
+        });
+
+        // Stakeholder role selection
+        document.querySelectorAll('.stakeholder-option').forEach(option => {
+            option.addEventListener('click', function(e) {
+                e.preventDefault();
+                const role = this.textContent;
+                const roleCode = this.getAttribute('data-role');
+                
+                // Update button text
+                document.querySelector('#stakeholder-toggle span').textContent = role;
+                
+                // Close dropdown
+                document.getElementById('stakeholder-dropdown').classList.add('hidden');
+            });
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('stakeholder-dropdown');
+            const toggle = document.getElementById('stakeholder-toggle');
+            
+            if (!toggle.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+
+        // Add smooth transitions for module switching
+        function addModuleTransitions() {
+            document.querySelectorAll('section[id]').forEach(section => {
+                section.style.transition = 'opacity 0.3s ease-in-out';
+            });
+        }
+
+        // Enhanced navigation function
+        function navigateTo(moduleId) {
+            // Hide all modules with fade effect
+            document.querySelectorAll('section[id]').forEach(section => {
+                section.style.opacity = '0';
+                setTimeout(() => {
+                    section.classList.add('hidden');
+                }, 300);
+            });
+            
+            // Show target module with fade effect
+            setTimeout(() => {
+                const targetModule = document.getElementById(moduleId);
+                targetModule.classList.remove('hidden');
+                setTimeout(() => {
+                    targetModule.style.opacity = '1';
+                }, 50);
+            }, 300);
+            
+            // Update active sidebar item
+            document.querySelectorAll('.dashboard-link').forEach(link => {
+                link.classList.remove('sidebar-item-active');
+            });
+            document.querySelector(`.dashboard-link[href="#${moduleId}"]`).classList.add('sidebar-item-active');
+            
+            // Scroll to top
+            window.scrollTo(0, 0);
+
+            // Close mobile sidebar if open
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth < 1024) {
+                sidebar.classList.add('-translate-x-full');
+            }
+        }
+
+        // Initialize module transitions
+        addModuleTransitions();
+    </script>
+</body>
+</html> 
