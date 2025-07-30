@@ -256,7 +256,7 @@
                             <div class="flex justify-between items-start">
                                 <div>
                                     <p class="text-gray-500 text-sm">Volunteers Assigned</p>
-                                    <h3 class="text-3xl font-bold mt-1" id="volunteers-assigned">291</h3>
+                                    <h3 class="text-3xl font-bold mt-1" id="volunteers-assigned">232</h3>
                                     <p class="text-info text-sm mt-2">
                                         <i class="fa fa-arrow-up mr-1"></i>To 146 subzones
                                     </p>
@@ -273,7 +273,7 @@
                                     <p class="text-gray-500 text-sm">Top Risk Zone</p>
                                     <h3 class="text-3xl font-bold mt-1" id="top-risk-zone">WISZ01</h3>
                                     <p class="text-secondary text-sm mt-2">
-                                        <i class="fa fa-map-marker mr-1"></i>3,340 OHCA cases
+                                        <i class="fa fa-map-marker mr-1"></i>JURONG ISLAND AND BUKOM
                                     </p>
                                 </div>
                                 <div class="bg-secondary/10 p-3 rounded-lg">
@@ -318,7 +318,7 @@
                     <div class="bg-white rounded-xl p-5 card-shadow">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold text-lg">Volunteer Assignments</h3>
-                            <span class="bg-primary/10 text-primary text-xs px-3 py-1 rounded-full">291 Assignments</span>
+                            <span class="bg-primary/10 text-primary text-xs px-3 py-1 rounded-full">232 Assignments</span>
                         </div>
                         
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="volunteer-assignments">
@@ -417,19 +417,19 @@
                             <h3 class="font-bold text-lg mb-4">Top AED Placement Recommendations</h3>
                             <div class="space-y-3">
                                 <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                    <h4 class="font-medium text-sm">TAMPINES EAST (High Priority)</h4>
-                                    <p class="text-xs text-gray-600">476 AEDs allocated, Risk: 0.055</p>
-                                    <p class="text-xs text-green-600 mt-1">Coverage improvement: 24.1</p>
-                                </div>
-                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                                    <h4 class="font-medium text-sm">WOODLANDS EAST (High Priority)</h4>
-                                    <p class="text-xs text-gray-600">400 AEDs allocated, Risk: 0.061</p>
-                                    <p class="text-xs text-green-600 mt-1">Coverage improvement: 16.6</p>
-                                </div>
-                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
                                     <h4 class="font-medium text-sm">BEDOK NORTH (High Priority)</h4>
                                     <p class="text-xs text-gray-600">240 AEDs allocated, Risk: 0.044</p>
                                     <p class="text-xs text-green-600 mt-1">Coverage improvement: 5.8</p>
+                                </div>
+                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                    <h4 class="font-medium text-sm">HOLLAND ROAD (High Priority)</h4>
+                                    <p class="text-xs text-gray-600">50 AEDs allocated, Risk: 0.068</p>
+                                    <p class="text-xs text-green-600 mt-1">Coverage improvement: 0.028</p>
+                                </div>
+                                <div class="p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                                    <h4 class="font-medium text-sm">KAMPONG UBI (High Priority)</h4>
+                                    <p class="text-xs text-gray-600">22 AEDs allocated, Risk: 0.027</p>
+                                    <p class="text-xs text-green-600 mt-1">Coverage improvement: 0.009</p>
                                 </div>
                             </div>
                         </div>
@@ -463,15 +463,15 @@
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div class="p-3 bg-gray-50 rounded-lg">
                                         <p class="text-sm text-gray-500">Total Volunteers</p>
-                                        <p class="text-2xl font-bold">1,000</p>
+                                        <p class="text-2xl font-bold">25,002</p>
                                     </div>
                                     <div class="p-3 bg-gray-50 rounded-lg">
                                         <p class="text-sm text-gray-500">Assigned</p>
-                                        <p class="text-2xl font-bold text-primary">291</p>
+                                        <p class="text-2xl font-bold text-primary">232</p>
                                     </div>
                                     <div class="p-3 bg-gray-50 rounded-lg">
                                         <p class="text-sm text-gray-500">Available</p>
-                                        <p class="text-2xl font-bold text-green-500">709</p>
+                                        <p class="text-2xl font-bold text-green-500">24,770</p>
                                     </div>
                                 </div>
                             </div>
@@ -563,7 +563,7 @@
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-sm">Volunteer Utilization</span>
-                                    <span class="text-sm font-medium text-orange-500">29.1%</span>
+                                    <span class="text-sm font-medium text-orange-500">0.9%</span>
                                 </div>
                             </div>
                         </div>
@@ -781,7 +781,7 @@
             {subzone: 'GLSZ03', risk_score: 0.0274, ohca_count: 180, subzone_name: 'KAMPONG UBI'}
         ];
 
-        // Updated volunteer assignments from latest data
+        // Updated volunteer assignments from latest data - using actual CSV data
         const volunteerAssignments = [
             {zone: 'CHINATOWN', volunteer_id: 'v00709', home_subzone: 'OTSZ03', response_time: 2.2, distance: 608},
             {zone: 'CHINATOWN', volunteer_id: 'v00897', home_subzone: 'OTSZ03', response_time: 9.0, distance: 932},
@@ -844,7 +844,7 @@
             // Update key metrics with real data
             document.getElementById('total-ohca').textContent = '15,340';
             document.getElementById('avg-risk').textContent = '0.024';
-            document.getElementById('volunteers-assigned').textContent = '291';
+            document.getElementById('volunteers-assigned').textContent = '232';
             document.getElementById('top-risk-zone').textContent = 'WISZ01';
             
             // Hide data status after 3 seconds
